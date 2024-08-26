@@ -1,0 +1,35 @@
+version: '3.9'
+services:
+  parsedmarc:
+    build: ./parsedmarc/
+    volumes:
+      - ./files:/input:ro
+      - ./output_files:/output
+      - ./parsedmarc/parsedmarc_logs:/var/log/parsedmarc
+    command: parsedmarc -c /parsedmarc.ini /input/* --debug
+    depends_on:
+      - elasticsearch
+    restart: on-failure
+    environment:
+        CRON_INTERVAL: 1m
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.5
+    ports:
+      - 9200:9200
+      - 9300:9300
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx2048m -Des.index.refresh_interval=30s"
+    volumes:
+      - ./elastic_data:/usr/share/elasticsearch/data
+
+  grafana:
+    build: ./grafana/
+    ports:
+      - 3000:3000
+    user: root
+    environment:
+      GF_INSTALL_PLUGINS: grafana-piechart-panel,grafana-worldmap-panel
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
